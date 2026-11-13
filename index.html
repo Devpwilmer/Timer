@@ -25,7 +25,7 @@
 </div>
 <p id="live-message" role="alert" hidden></p>
 </section>
-<section class="card" id="hero" aria-labelledby="title">
+<div id="timer-view"><section class="card" id="hero" aria-labelledby="title">
 <small id="slot"></small><h2 id="title"></h2><p id="person" class="muted"></p><p id="note"></p>
 <div id="timer" role="timer" aria-label="Tiempo de la actividad"></div><strong id="state" aria-live="polite"></strong><progress id="progress" max="1" value="0" aria-label="Progreso del bloque"></progress>
 <p id="offset"></p><div role="status"><p id="counsel-alert" hidden></p></div>
@@ -41,7 +41,7 @@
 <div class="controls"><button id="voice" aria-pressed="false">Activar y probar alertas</button><button id="program-voice" aria-pressed="false">Activar voz del programa</button><button id="sound" aria-pressed="false">Sonido apagado</button><button id="wake" aria-pressed="false">Mantener pantalla activa</button></div><p id="feedback" role="status"></p>
 </section>
 <section class="card"><small>A continuación</small><h3 id="upnext"></h3><p class="muted" id="updetail"></p></section>
-<section class="card"><h3>Programa completo</h3><p class="muted">Toca una actividad para seleccionarla. Arrastra desde el asa ⠿ o usa las flechas para mover una actividad. El orden se guarda en este navegador.</p><div id="agenda"></div></section>
+<section class="card"><h3>Programa completo</h3><p class="muted">Toca una actividad para seleccionarla. Arrastra desde el asa ⠿ o usa las flechas para mover una actividad. El orden se guarda en este navegador.</p><div id="agenda"></div></section></div>
 
 </main><script>
 const program = [
@@ -500,13 +500,20 @@ $("wake").onclick=async ()=>{
   if(wakeWanted) await keepAwake();
   else await lock?.release();
 };
-document.addEventListener("visibilitychange",()=>{
-  if(document.visibilityState==="visible" && wakeWanted && (!lock || lock.released)) keepAwake();
-  tick();
-});
-renderAgenda();
-render();
-setInterval(tick,250);
+const receiverMode = typeof location!=="undefined" &&
+  /^[a-f0-9]{24}$/.test(new URL(location.href).searchParams.get("sala")??"");
+if (receiverMode) {
+  $("timer-view").hidden=true;
+  $("clock").parentElement.hidden=true;
+} else {
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="visible" && wakeWanted && (!lock || lock.released)) keepAwake();
+    tick();
+  });
+  renderAgenda();
+  render();
+  setInterval(tick,1000);
+}
 </script>
 <script>
 (() => {
