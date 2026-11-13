@@ -208,7 +208,7 @@ function tick() {
       if (programVoice) speak("Tiempo cumplido.");
       else play(420);
     } else if(previous>120000 && ms<=120000) {
-      if (programVoice) speak("Quedan dos minutos. "+nextAnnouncement());
+      if (programVoice) speak((duration()<120000?"Quedan menos de dos minutos. ":"Quedan dos minutos. ")+nextAnnouncement());
       else play(740);
     }
 
@@ -430,8 +430,11 @@ $("next").onclick=()=>{
 };
 $("toggle").onclick=()=>{
   if(state.ends) state={...state,left:remaining(),ends:0};
-  else state={...state,ends:Date.now()+remaining(),left:null};
-  previous=null;
+  else {
+    const fresh=state.left===null;
+    state={...state,ends:Date.now()+remaining(),left:null};
+    previous=fresh?Math.max(duration(),120001):null;
+  }
   save();
   render();
 };
