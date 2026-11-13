@@ -17,7 +17,7 @@
 <p class="muted">El cambio se guarda en este navegador. Las demás actividades mantienen su horario.</p>
 <p id="edit-error" role="alert"></p><div class="controls"><button type="button" id="edit-cancel">Cancelar</button><button type="submit">Guardar cambios</button></div>
 </form></section>
-<div class="controls"><button id="voice" aria-pressed="false">Activar y probar voz</button><button id="sound" aria-pressed="false">Sonido apagado</button><button id="wake" aria-pressed="false">Mantener pantalla activa</button></div><p id="feedback" role="status"></p>
+<div class="controls"><button id="voice" aria-pressed="false">Activar y probar alertas</button><button id="sound" aria-pressed="false">Sonido apagado</button><button id="wake" aria-pressed="false">Mantener pantalla activa</button></div><p id="feedback" role="status"></p>
 </section>
 <section class="card"><small>A continuación</small><h3 id="upnext"></h3><p class="muted" id="updetail"></p></section>
 <section class="card"><h3>Programa completo</h3><p class="muted">Toca una actividad para seleccionarla. Arrastra desde el asa ⠿ o usa las flechas para mover una actividad. El orden se guarda en este navegador.</p><div id="agenda"></div></section>
@@ -87,6 +87,7 @@ try {
 } catch {}
 let previous = null;
 let voiceEnabled = false;
+let vibrationEnabled = false;
 let counselAnnounced = false;
 let counselPreviewUntil = 0;
 const counselPhrase = "Consejeros, por favor alístense. Faltan cinco minutos para terminar la prédica.";
@@ -132,6 +133,9 @@ function play(frequency) {
   oscillator.start(now);
   oscillator.stop(now+.36);
 }
+function vibrateCounsel() {
+  return typeof navigator.vibrate==="function" && navigator.vibrate([250,120,250,120,450]);
+}
 function speakCounsel() {
   const utterance=new SpeechSynthesisUtterance(counselPhrase);
   utterance.lang="es-PE";
@@ -145,15 +149,15 @@ function speakCounsel() {
 }
 $("voice").onclick=()=>{
   counselPreviewUntil=Date.now()+8000;
+  vibrationEnabled=vibrateCounsel();
   if (window.speechSynthesis && typeof SpeechSynthesisUtterance==="function") {
     voiceEnabled=true;
-    $("voice").textContent="Probar voz de consejería";
-    $("voice").setAttribute("aria-pressed","true");
-    $("feedback").textContent="Voz activada para las prédicas en esta pestaña.";
     speakCounsel();
-  } else {
-    $("feedback").textContent="Este navegador no admite el aviso por voz.";
   }
+  $("voice").textContent="Probar alertas de consejería";
+  $("voice").setAttribute("aria-pressed",String(voiceEnabled || vibrationEnabled));
+  $("feedback").textContent=(voiceEnabled?"Voz activada. ":"Voz no disponible. ")+
+    (vibrationEnabled?"Vibración activada.":"Vibración no disponible en este navegador.");
   tick();
 };
 function tick() {
@@ -180,6 +184,7 @@ function tick() {
   if (!state.ends && state.left===null || ms>300000) counselAnnounced=false;
   if (preparing && !counselAnnounced) {
     counselAnnounced=true;
+    if (vibrationEnabled && !preview) vibrateCounsel();
     if (voiceEnabled && !preview) speakCounsel();
     else if (!voiceEnabled) play(960);
   }
