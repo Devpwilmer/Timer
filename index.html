@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Control de tiempos · IX EBJ 2026</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#0c1519;color:#edf6f4;font:16px system-ui,sans-serif}main{max-width:1040px;margin:auto;padding:22px 15px 40px}header,.split,.controls{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}header{margin-bottom:16px}h1{font-size:22px;margin:0}h2{margin:5px 0;font-size:clamp(23px,5vw,36px)}h3,p{margin:5px 0}.muted,small{color:#afc3c4}.card{border:1px solid #35494e;border-radius:16px;background:#17252a;padding:16px;margin:12px 0}#hero{text-align:center}#timer{font-size:clamp(58px,15vw,132px);line-height:1.12;letter-spacing:-.06em;font-weight:800;font-variant-numeric:tabular-nums;color:#91f5c6}#hero.warn #timer{color:#ffcf72}#hero.over #timer{color:#ffa6a6}progress{width:100%;height:10px;accent-color:#62dba7}button{background:#253a40;color:#fff;border:1px solid #50696d;border-radius:9px;padding:10px 12px;min-height:44px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #91f5c6;outline-offset:2px}button:disabled{opacity:.45;cursor:default}#toggle{background:#91f5c6;color:#092319;font-weight:750;flex:1} .controls{justify-content:center;margin-top:12px}#agenda{display:grid;gap:7px;margin-top:10px}.row{display:grid;grid-template-columns:3.15rem 1fr auto;gap:8px;text-align:left;align-items:center;width:100%}.row[aria-current=true]{border-color:#91f5c6;background:#1b4239}.agenda-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.move-controls{display:flex;gap:4px}.move-controls button{padding:6px 9px}.agenda-item.drop-target{outline:2px solid #91f5c6;border-radius:9px}.row time,#clock{color:#91f5c6;font-variant-numeric:tabular-nums}.row small{display:block}.split>*{margin:0}#offset{font-weight:700}dialog{color:inherit;background:#17252a;border:1px solid #50696d;border-radius:16px;width:min(420px,calc(100% - 28px));padding:18px}dialog::backdrop{background:#000a}dialog label{display:block;margin:12px 0}dialog input{display:block;width:100%;min-height:44px;margin-top:4px;padding:8px;color:inherit;background:#0c1519;border:1px solid #50696d;border-radius:8px;font:inherit;color-scheme:dark}.over #state{color:#ffa6a6}.warn #state{color:#ffcf72}
+*{box-sizing:border-box}body{margin:0;background:#0c1519;color:#edf6f4;font:16px system-ui,sans-serif}main{max-width:1040px;margin:auto;padding:22px 15px 40px}header,.split,.controls{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}header{margin-bottom:16px}h1{font-size:22px;margin:0}h2{margin:5px 0;font-size:clamp(23px,5vw,36px)}h3,p{margin:5px 0}.muted,small{color:#afc3c4}.card{border:1px solid #35494e;border-radius:16px;background:#17252a;padding:16px;margin:12px 0}#hero{text-align:center}#timer{font-size:clamp(58px,15vw,132px);line-height:1.12;letter-spacing:-.06em;font-weight:800;font-variant-numeric:tabular-nums;color:#91f5c6}#hero.warn #timer{color:#ffcf72}#hero.over #timer{color:#ffa6a6}progress{width:100%;height:10px;accent-color:#62dba7}button{background:#253a40;color:#fff;border:1px solid #50696d;border-radius:9px;padding:10px 12px;min-height:44px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #91f5c6;outline-offset:2px}button:disabled{opacity:.45;cursor:default}#toggle{background:#91f5c6;color:#092319;font-weight:750;flex:1} .controls{justify-content:center;margin-top:12px}#agenda{display:grid;gap:7px;margin-top:10px}.row{display:grid;grid-template-columns:3.15rem 1fr auto;gap:8px;text-align:left;align-items:center;width:100%}.row[aria-current=true]{border-color:#91f5c6;background:#1b4239}.agenda-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.move-controls{display:flex;gap:4px}.move-controls button{padding:6px 9px}.drag-handle{display:grid;place-items:center;width:40px;min-height:44px;border:1px solid #50696d;border-radius:9px;color:#91f5c6;touch-action:none;user-select:none;cursor:grab}.drag-handle:active{cursor:grabbing}.agenda-item.drop-target{outline:2px solid #91f5c6;border-radius:9px}.row time,#clock{color:#91f5c6;font-variant-numeric:tabular-nums}.row small{display:block}.split>*{margin:0}#offset{font-weight:700}dialog{color:inherit;background:#17252a;border:1px solid #50696d;border-radius:16px;width:min(420px,calc(100% - 28px));padding:18px}dialog::backdrop{background:#000a}dialog label{display:block;margin:12px 0}dialog input{display:block;width:100%;min-height:44px;margin-top:4px;padding:8px;color:inherit;background:#0c1519;border:1px solid #50696d;border-radius:8px;font:inherit;color-scheme:dark}.over #state{color:#ffa6a6}.warn #state{color:#ffcf72}
 </style></head><body><main>
 <header><div><h1>IX EBJ 2026</h1><small>Control de tiempos</small></div><div><span id="clock"></span> <small>Perú</small></div></header>
 <section class="card" id="hero" aria-labelledby="title">
@@ -12,7 +12,7 @@
 <div class="controls"><button id="sound" aria-pressed="false">Sonido apagado</button><button id="wake" aria-pressed="false">Mantener pantalla activa</button></div><p id="feedback" role="status"></p>
 </section>
 <section class="card"><small>A continuación</small><h3 id="upnext"></h3><p class="muted" id="updetail"></p></section>
-<section class="card"><h3>Programa completo</h3><p class="muted">Toca una actividad para seleccionarla. Arrástrala o usa las flechas para moverla. El orden se guarda en este navegador.</p><div id="agenda"></div></section>
+<section class="card"><h3>Programa completo</h3><p class="muted">Toca una actividad para seleccionarla. Arrastra desde el asa ⠿ o usa las flechas para mover una actividad. El orden se guarda en este navegador.</p><div id="agenda"></div></section>
 <dialog id="editor" aria-labelledby="edit-title"><form id="edit-form">
 <h3 id="edit-title">Editar horario</h3><p id="edit-name"></p>
 <label>Hora de inicio (Perú)<input id="edit-time" type="time" required></label>
@@ -221,6 +221,62 @@ function renderAgenda() {
     };
     const controls=document.createElement("div");
     controls.className="move-controls";
+    const handle=document.createElement("span");
+    handle.className="drag-handle";
+    handle.textContent="⠿";
+    handle.title="Arrastrar "+title;
+    handle.setAttribute("aria-hidden","true");
+    let pointer=null;
+    let target=null;
+    let scrollFrame=0;
+    let x=0;
+    let y=0;
+    let startY=0;
+    function highlight() {
+      const hit=document.elementFromPoint(x,y)?.closest(".agenda-item");
+      const index=hit ? Array.prototype.indexOf.call(agenda.children,hit) : -1;
+      if (index<0 || index===target) return;
+      agenda.children[target]?.classList.remove("drop-target");
+      target=index;
+      if (index!==i) hit.classList.add("drop-target");
+    }
+    function scrollDrag() {
+      const edge=64;
+      const step=y<edge ? -10 : y>window.innerHeight-edge ? 10 : 0;
+      if (step) {
+        window.scrollBy(0,step);
+        highlight();
+      }
+      scrollFrame=requestAnimationFrame(scrollDrag);
+    }
+    handle.onpointerdown=event=>{
+      if (!event.isPrimary || event.button!==0) return;
+      pointer=event.pointerId;
+      startY=y=event.clientY;
+      x=event.clientX;
+      handle.setPointerCapture(pointer);
+    };
+    handle.onpointermove=event=>{
+      if (event.pointerId!==pointer) return;
+      x=event.clientX;
+      y=event.clientY;
+      if (!scrollFrame && Math.abs(y-startY)<6) return;
+      highlight();
+      if (!scrollFrame) scrollFrame=requestAnimationFrame(scrollDrag);
+    };
+    function finishDrag(event,apply) {
+      if (event.pointerId!==pointer) return;
+      pointer=null;
+      cancelAnimationFrame(scrollFrame);
+      scrollFrame=0;
+      const destination=target;
+      target=null;
+      agenda.children[destination]?.classList.remove("drop-target");
+      if (apply && destination!==null) move(i,destination);
+    }
+    handle.onpointerup=event=>finishDrag(event,true);
+    handle.onpointercancel=handle.onlostpointercapture=event=>finishDrag(event,false);
+    controls.append(handle);
     for (const [direction,icon,label] of [[-1,"↑","Subir"],[1,"↓","Bajar"]]) {
       const button=document.createElement("button");
       button.textContent=icon;
@@ -229,8 +285,8 @@ function renderAgenda() {
       button.onclick=()=>{
         move(i,i+direction);
         const movedControls=agenda.children[i+direction].lastElementChild;
-        const movedButton=movedControls.children[direction===-1?0:1];
-        (movedButton.disabled?movedControls.children[direction===-1?1:0]:movedButton).focus();
+        const movedButton=movedControls.children[direction===-1?1:2];
+        (movedButton.disabled?movedControls.children[direction===-1?2:1]:movedButton).focus();
       };
       controls.append(button);
     }
