@@ -2,8 +2,29 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Control de tiempos · IX EBJ 2026</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#0c1519;color:#edf6f4;font:16px system-ui,sans-serif}main{max-width:1040px;margin:auto;padding:22px 15px 40px}header,.split,.controls{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}header{margin-bottom:16px}h1{font-size:22px;margin:0}h2{margin:5px 0;font-size:clamp(23px,5vw,36px)}h3,p{margin:5px 0}.muted,small{color:#afc3c4}.card{border:1px solid #35494e;border-radius:16px;background:#17252a;padding:16px;margin:12px 0}#hero{text-align:center}#timer{font-size:clamp(58px,15vw,132px);line-height:1.12;letter-spacing:-.06em;font-weight:800;font-variant-numeric:tabular-nums;color:#91f5c6}#hero.warn #timer{color:#ffcf72}#hero.over #timer{color:#ffa6a6}progress{width:100%;height:10px;accent-color:#62dba7}button{background:#253a40;color:#fff;border:1px solid #50696d;border-radius:9px;padding:10px 12px;min-height:44px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #91f5c6;outline-offset:2px}button:disabled{opacity:.45;cursor:default}#toggle{background:#91f5c6;color:#092319;font-weight:750;flex:1} .controls{justify-content:center;margin-top:12px}#agenda{display:grid;gap:7px;margin-top:10px}.row{display:grid;grid-template-columns:3.15rem 1fr auto;gap:8px;text-align:left;align-items:center;width:100%}.row[aria-current=true]{border-color:#91f5c6;background:#1b4239}.agenda-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.move-controls{display:flex;gap:4px}.move-controls button{padding:6px 9px}.drag-handle{display:grid;place-items:center;width:40px;min-height:44px;border:1px solid #50696d;border-radius:9px;color:#91f5c6;touch-action:none;user-select:none;cursor:grab}.drag-handle:active{cursor:grabbing}.agenda-item.drop-target{outline:2px solid #91f5c6;border-radius:9px}.row time,#clock{color:#91f5c6;font-variant-numeric:tabular-nums}.row small{display:block}.split>*{margin:0}#offset{font-weight:700}#editor{text-align:left;border:1px solid #50696d;border-radius:12px;padding:14px;margin-top:14px;background:#0c1519}#editor label{display:block;margin:12px 0}#editor input{display:block;width:100%;min-height:44px;margin-top:4px;padding:8px;color:inherit;background:#17252a;border:1px solid #50696d;border-radius:8px;font:inherit}#edit-error{color:#ffa6a6}.over #state{color:#ffa6a6}.warn #state{color:#ffcf72}
-#counsel-alert{padding:16px;border:2px solid #d4abff;border-radius:12px;background:#52267d;color:#fff;font-size:clamp(19px,4vw,28px);font-weight:800;margin:12px 0}#hero.counsel-active{border-color:#d4abff}#hero.counsel-active #timer{color:#d4abff}</style></head><body><main>
+#counsel-alert{padding:16px;border:2px solid #d4abff;border-radius:12px;background:#52267d;color:#fff;font-size:clamp(19px,4vw,28px);font-weight:800;margin:12px 0}#hero.counsel-active{border-color:#d4abff}#hero.counsel-active #timer{color:#d4abff}#live-message{background:#52267d;color:#fff;border:2px solid #d4abff;border-radius:12px;padding:16px;font-size:1.35rem;overflow-wrap:anywhere}#live input{width:100%;min-height:44px;margin:8px 0;padding:8px;font:inherit}</style></head><body><main>
 <header><div><h1>IX EBJ 2026</h1><small>Control de tiempos</small></div><div><span id="clock"></span> <small>Perú</small></div></header>
+<section class="card" id="live">
+<h2>Avisos en vivo</h2><p id="live-status" role="status"></p>
+<button id="live-start">Abrir sala de avisos</button>
+<div id="live-send" hidden>
+<p class="muted">Comparte el enlace del equipo. Mantén esta página abierta mientras coordinas.</p>
+<input id="live-link" readonly aria-label="Enlace para el equipo">
+<button id="live-copy">Copiar enlace</button>
+<form id="live-form">
+<label for="live-input">Mensaje para el equipo</label>
+<input id="live-input" maxlength="240" required placeholder="Escribe un aviso">
+<button id="live-submit" type="submit" disabled>Enviar aviso</button>
+<button id="live-counsel" type="button" disabled>Consejeros, alístense</button>
+</form><p id="live-result" role="status"></p>
+</div>
+<div id="live-receive" hidden>
+<p>Mantén esta página visible para recibir avisos.</p>
+<button id="live-enable">Activar y probar sonido y vibración</button>
+<p id="live-test" role="status"></p>
+</div>
+<p id="live-message" role="alert" hidden></p>
+</section>
 <section class="card" id="hero" aria-labelledby="title">
 <small id="slot"></small><h2 id="title"></h2><p id="person" class="muted"></p><p id="note"></p>
 <div id="timer" role="timer" aria-label="Tiempo de la actividad"></div><strong id="state" aria-live="polite"></strong><progress id="progress" max="1" value="0" aria-label="Progreso del bloque"></progress>
@@ -486,4 +507,155 @@ document.addEventListener("visibilitychange",()=>{
 renderAgenda();
 render();
 setInterval(tick,250);
+</script>
+<script>
+(() => {
+  const get=id=>document.getElementById(id);
+  const setStatus=message=>get("live-status").textContent=message;
+  const room=new URL(location.href).searchParams.get("sala");
+  const prefix="ebj26-";
+  const connections=new Set();
+  let peer, incoming, retry, deadline, library, audioReady=false, senderReady=false;
+  function loadPeer() {
+    if (window.Peer) return Promise.resolve();
+    return library ??= new Promise((resolve,reject)=>{
+      const script=document.createElement("script");
+      script.src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js";
+      script.onload=resolve;
+      script.onerror=()=>{library=null;script.remove();reject(new Error("PeerJS"));};
+      document.head.append(script);
+    });
+  }
+  function announce(message) {
+    const panel=get("live-message");
+    panel.hidden=false;
+    panel.textContent=message;
+    if (!audioReady) return;
+    if (typeof navigator.vibrate==="function") navigator.vibrate([250,120,250,120,450]);
+    if (window.speechSynthesis && typeof SpeechSynthesisUtterance==="function") speak(message);
+  }
+  function updateSender() {
+    setStatus(senderReady ? "Sala abierta · "+connections.size+" celulares conectados" : "Reconectando la sala…");
+    get("live-submit").disabled=get("live-counsel").disabled=!senderReady || !connections.size;
+  }
+  function send(message) {
+    if (!message || !senderReady || !connections.size) return;
+    let count=0;
+    for (const connection of connections) {
+      if (!connection.open) continue;
+      try { connection.send({type:"aviso",message}); count++; } catch {}
+    }
+    get("live-result").textContent=count ? "Enviado a "+count+" conexiones." : "No se pudo enviar. Revisa la conexión.";
+  }
+  get("live-start").onclick=async ()=>{
+    const button=get("live-start");
+    button.disabled=true;
+    setStatus("Abriendo sala…");
+    try {
+      await loadPeer();
+      let code=sessionStorage.getItem("ebj26-sala");
+      if (!/^[a-f0-9]{24}$/.test(code??"")) {
+        code=Array.from(crypto.getRandomValues(new Uint8Array(12)),n=>n.toString(16).padStart(2,"0")).join("");
+        sessionStorage.setItem("ebj26-sala",code);
+      }
+      peer=new Peer(prefix+code);
+      peer.on("open",()=>{
+        const url=new URL(location.href);
+        url.searchParams.set("sala",code);
+        get("live-link").value=url.href;
+        get("live-send").hidden=false;
+        button.hidden=true;
+        senderReady=true;
+        updateSender();
+      });
+      peer.on("connection",connection=>{
+        connection.on("open",()=>{connections.add(connection);updateSender();});
+        const remove=()=>{connections.delete(connection);updateSender();};
+        connection.on("close",remove);
+        connection.on("error",remove);
+      });
+      peer.on("disconnected",()=>{
+        senderReady=false;
+        updateSender();
+        if (!peer.destroyed) peer.reconnect();
+      });
+      peer.on("error",error=>{
+        if (error.type==="peer-unavailable") return;
+        setStatus("No se pudo abrir la sala. Comprueba tu conexión o cierra otra pestaña con la misma sala.");
+        if (!senderReady) {peer.destroy();connections.clear();get("live-send").hidden=true;button.hidden=false;button.disabled=false;}
+      });
+    } catch {
+      setStatus("No se pudo conectar. Revisa internet y vuelve a intentar.");
+      button.disabled=false;
+    }
+  };
+  get("live-copy").onclick=async ()=>{
+    try {await navigator.clipboard.writeText(get("live-link").value);get("live-result").textContent="Enlace copiado.";}
+    catch {get("live-link").select();get("live-result").textContent="Copia el enlace seleccionado.";}
+  };
+  get("live-form").onsubmit=event=>{
+    event.preventDefault();
+    send(get("live-input").value.trim());
+  };
+  get("live-counsel").onclick=()=>send("Consejeros, por favor alístense.");
+  get("live-enable").onclick=()=>{
+    audioReady=true;
+    announce("Prueba de aviso. Alertas activadas.");
+    get("live-test").textContent=typeof navigator.vibrate==="function" ? "Comprueba si tu celular vibra." : "Este navegador no admite vibración.";
+  };
+  function reconnect() {
+    clearTimeout(retry);
+    setStatus("Esperando al coordinador…");
+    retry=setTimeout(join,3500);
+  }
+  function join() {
+    if (!peer?.open || incoming) return;
+    const connection=peer.connect(prefix+room,{reliable:true});
+    incoming=connection;
+    const closed=()=>{
+      if (incoming!==connection) return;
+      incoming=null;
+      clearTimeout(deadline);
+      connection.close();
+      reconnect();
+    };
+    deadline=setTimeout(closed,10000);
+    connection.on("open",()=>{
+      if (incoming!==connection) return;
+      clearTimeout(deadline);
+      setStatus("Conectado · listo para recibir avisos");
+    });
+    connection.on("data",data=>{
+      if (incoming===connection && data?.type==="aviso" && typeof data.message==="string") announce(data.message.slice(0,240));
+    });
+    connection.on("close",closed);
+    connection.on("error",closed);
+  }
+  async function startReceiver() {
+    try {
+      await loadPeer();
+      peer=new Peer();
+      peer.on("open",join);
+      peer.on("disconnected",()=>{
+        if (!incoming?.open) setStatus("Reconectando…");
+        if (!peer.destroyed) peer.reconnect();
+      });
+      peer.on("error",error=>{
+        if (error.type==="peer-unavailable") {
+          const pending=incoming;
+          incoming=null;
+          clearTimeout(deadline);
+          pending?.close();
+          reconnect();
+        } else if (!incoming?.open) setStatus("Conexión interrumpida. Si no vuelve, recarga la página.");
+      });
+    } catch {setStatus("No se pudo cargar la conexión. Revisa internet y recarga.");}
+  }
+  if (/^[a-f0-9]{24}$/.test(room??"")) {
+    get("live-start").hidden=true;
+    get("live-receive").hidden=false;
+    setStatus("Conectando con el coordinador…");
+    startReceiver();
+  }
+})();
 </script></body></html>
