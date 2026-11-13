@@ -17,7 +17,7 @@
 <p class="muted">El cambio se guarda en este navegador. Las demás actividades mantienen su horario.</p>
 <p id="edit-error" role="alert"></p><div class="controls"><button type="button" id="edit-cancel">Cancelar</button><button type="submit">Guardar cambios</button></div>
 </form></section>
-<div class="controls"><button id="voice" aria-pressed="false">Activar y probar alertas</button><button id="sound" aria-pressed="false">Sonido apagado</button><button id="wake" aria-pressed="false">Mantener pantalla activa</button></div><p id="feedback" role="status"></p>
+<div class="controls"><button id="voice" aria-pressed="false">Activar y probar alertas</button><button id="program-voice" aria-pressed="false">Activar voz del programa</button><button id="sound" aria-pressed="false">Sonido apagado</button><button id="wake" aria-pressed="false">Mantener pantalla activa</button></div><p id="feedback" role="status"></p>
 </section>
 <section class="card"><small>A continuación</small><h3 id="upnext"></h3><p class="muted" id="updetail"></p></section>
 <section class="card"><h3>Programa completo</h3><p class="muted">Toca una actividad para seleccionarla. Arrastra desde el asa ⠿ o usa las flechas para mover una actividad. El orden se guarda en este navegador.</p><div id="agenda"></div></section>
@@ -87,6 +87,7 @@ try {
 } catch {}
 let previous = null;
 let voiceEnabled = false;
+let programVoice = false;
 let vibrationEnabled = false;
 let counselAnnounced = false;
 let counselPreviewUntil = 0;
@@ -136,8 +137,8 @@ function play(frequency) {
 function vibrateCounsel() {
   return typeof navigator.vibrate==="function" && navigator.vibrate([250,120,250,120,450]);
 }
-function speakCounsel() {
-  const utterance=new SpeechSynthesisUtterance(counselPhrase);
+function speak(phrase) {
+  const utterance=new SpeechSynthesisUtterance(phrase);
   utterance.lang="es-PE";
   const voices=window.speechSynthesis.getVoices();
   utterance.voice=voices.find(voice=>voice.lang.toLowerCase()==="es-pe") ??
@@ -152,13 +153,27 @@ $("voice").onclick=()=>{
   vibrationEnabled=vibrateCounsel();
   if (window.speechSynthesis && typeof SpeechSynthesisUtterance==="function") {
     voiceEnabled=true;
-    speakCounsel();
+    speak(counselPhrase);
   }
   $("voice").textContent="Probar alertas de consejería";
   $("voice").setAttribute("aria-pressed",String(voiceEnabled || vibrationEnabled));
   $("feedback").textContent=(voiceEnabled?"Voz activada. ":"Voz no disponible. ")+
     (vibrationEnabled?"Vibración activada.":"Vibración no disponible en este navegador.");
   tick();
+};
+function nextAnnouncement() {
+  const next=program[state.i+1];
+  return next ? "Sigue "+next[1]+(next[3]?". Responsable: "+next[3]:"")+"." : "Es la última actividad del programa.";
+}
+$("program-voice").onclick=()=>{
+  if (!window.speechSynthesis || typeof SpeechSynthesisUtterance!=="function") {
+    $("feedback").textContent="Este navegador no admite el aviso por voz.";
+    return;
+  }
+  programVoice=!programVoice;
+  $("program-voice").setAttribute("aria-pressed",String(programVoice));
+  $("program-voice").textContent=programVoice?"Desactivar voz del programa":"Activar voz del programa";
+  if (programVoice) speak(nextAnnouncement());
 };
 function tick() {
   const now=new Date();
@@ -185,12 +200,17 @@ function tick() {
   if (preparing && !counselAnnounced) {
     counselAnnounced=true;
     if (vibrationEnabled && !preview) vibrateCounsel();
-    if (voiceEnabled && !preview) speakCounsel();
+    if (voiceEnabled && !preview) speak(counselPhrase);
     else if (!voiceEnabled) play(960);
   }
   if(state.ends && previous!==null){
-    if(previous>0 && ms<=0) play(420);
-    else if(previous>120000 && ms<=120000) play(740);
+    if(previous>0 && ms<=0) {
+      if (programVoice) speak("Tiempo cumplido.");
+      else play(420);
+    } else if(previous>120000 && ms<=120000) {
+      if (programVoice) speak("Quedan dos minutos. "+nextAnnouncement());
+      else play(740);
+    }
 
   }
   previous=state.ends?ms:null;
