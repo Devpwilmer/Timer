@@ -2,7 +2,7 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Control de tiempos · IX EBJ 2026</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#0c1519;color:#edf6f4;font:16px system-ui,sans-serif}main{max-width:1040px;margin:auto;padding:22px 15px 40px}header,.split,.controls{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}header{margin-bottom:16px}h1{font-size:22px;margin:0}h2{margin:5px 0;font-size:clamp(23px,5vw,36px)}h3,p{margin:5px 0}.muted,small{color:#afc3c4}.card{border:1px solid #35494e;border-radius:16px;background:#17252a;padding:16px;margin:12px 0}#hero{text-align:center}#timer{font-size:clamp(58px,15vw,132px);line-height:1.12;letter-spacing:-.06em;font-weight:800;font-variant-numeric:tabular-nums;color:#91f5c6}#hero.warn #timer{color:#ffcf72}#hero.over #timer{color:#ffa6a6}progress{width:100%;height:10px;accent-color:#62dba7}button{background:#253a40;color:#fff;border:1px solid #50696d;border-radius:9px;padding:10px 12px;min-height:44px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #91f5c6;outline-offset:2px}button:disabled{opacity:.45;cursor:default}#toggle{background:#91f5c6;color:#092319;font-weight:750;flex:1} .controls{justify-content:center;margin-top:12px}#agenda{display:grid;gap:7px;margin-top:10px}.row{display:grid;grid-template-columns:3.15rem 1fr auto;gap:8px;text-align:left;align-items:center;width:100%}.row[aria-current=true]{border-color:#91f5c6;background:#1b4239}.agenda-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.move-controls{display:flex;gap:4px}.move-controls button{padding:6px 9px}.drag-handle{display:grid;place-items:center;width:40px;min-height:44px;border:1px solid #50696d;border-radius:9px;color:#91f5c6;touch-action:none;user-select:none;cursor:grab}.drag-handle:active{cursor:grabbing}.agenda-item.drop-target{outline:2px solid #91f5c6;border-radius:9px}.row time,#clock{color:#91f5c6;font-variant-numeric:tabular-nums}.row small{display:block}.split>*{margin:0}#offset{font-weight:700}#editor{text-align:left;border:1px solid #50696d;border-radius:12px;padding:14px;margin-top:14px;background:#0c1519}#editor label{display:block;margin:12px 0}#editor input{display:block;width:100%;min-height:44px;margin-top:4px;padding:8px;color:inherit;background:#17252a;border:1px solid #50696d;border-radius:8px;font:inherit}#edit-error{color:#ffa6a6}.over #state{color:#ffa6a6}.warn #state{color:#ffcf72}
-#counsel-alert{padding:12px;border-radius:9px;background:#563c16;color:#ffe1a1;font-weight:700;margin:10px 0}</style></head><body><main>
+#counsel-alert{padding:16px;border:2px solid #d4abff;border-radius:12px;background:#52267d;color:#fff;font-size:clamp(19px,4vw,28px);font-weight:800;margin:12px 0}#hero.counsel-active{border-color:#d4abff}#hero.counsel-active #timer{color:#d4abff}</style></head><body><main>
 <header><div><h1>IX EBJ 2026</h1><small>Control de tiempos</small></div><div><span id="clock"></span> <small>Perú</small></div></header>
 <section class="card" id="hero" aria-labelledby="title">
 <small id="slot"></small><h2 id="title"></h2><p id="person" class="muted"></p><p id="note"></p>
@@ -17,7 +17,7 @@
 <p class="muted">El cambio se guarda en este navegador. Las demás actividades mantienen su horario.</p>
 <p id="edit-error" role="alert"></p><div class="controls"><button type="button" id="edit-cancel">Cancelar</button><button type="submit">Guardar cambios</button></div>
 </form></section>
-<div class="controls"><button id="sound" aria-pressed="false">Sonido apagado</button><button id="wake" aria-pressed="false">Mantener pantalla activa</button></div><p id="feedback" role="status"></p>
+<div class="controls"><button id="voice" aria-pressed="false">Activar y probar voz</button><button id="sound" aria-pressed="false">Sonido apagado</button><button id="wake" aria-pressed="false">Mantener pantalla activa</button></div><p id="feedback" role="status"></p>
 </section>
 <section class="card"><small>A continuación</small><h3 id="upnext"></h3><p class="muted" id="updetail"></p></section>
 <section class="card"><h3>Programa completo</h3><p class="muted">Toca una actividad para seleccionarla. Arrastra desde el asa ⠿ o usa las flechas para mover una actividad. El orden se guarda en este navegador.</p><div id="agenda"></div></section>
@@ -86,6 +86,10 @@ try {
   }
 } catch {}
 let previous = null;
+let voiceEnabled = false;
+let counselAnnounced = false;
+let counselPreviewUntil = 0;
+const counselPhrase = "Consejeros, por favor alístense. Faltan cinco minutos para terminar la prédica.";
 let audio = null;
 let sound = false;
 let wakeWanted = false;
@@ -128,6 +132,30 @@ function play(frequency) {
   oscillator.start(now);
   oscillator.stop(now+.36);
 }
+function speakCounsel() {
+  const utterance=new SpeechSynthesisUtterance(counselPhrase);
+  utterance.lang="es-PE";
+  const voices=window.speechSynthesis.getVoices();
+  utterance.voice=voices.find(voice=>voice.lang.toLowerCase()==="es-pe") ??
+    voices.find(voice=>voice.lang.toLowerCase().startsWith("es-")) ?? null;
+  utterance.onerror=()=>{
+    $("feedback").textContent="El navegador no pudo reproducir la voz. El aviso visual sigue disponible.";
+  };
+  window.speechSynthesis.speak(utterance);
+}
+$("voice").onclick=()=>{
+  counselPreviewUntil=Date.now()+8000;
+  if (window.speechSynthesis && typeof SpeechSynthesisUtterance==="function") {
+    voiceEnabled=true;
+    $("voice").textContent="Probar voz de consejería";
+    $("voice").setAttribute("aria-pressed","true");
+    $("feedback").textContent="Voz activada para las prédicas en esta pestaña.";
+    speakCounsel();
+  } else {
+    $("feedback").textContent="Este navegador no admite el aviso por voz.";
+  }
+  tick();
+};
 function tick() {
   const now=new Date();
   $("clock").textContent=peru.format(now);
@@ -136,20 +164,29 @@ function tick() {
   const over=timed && ms<=0;
   const warning=timed && !over && ms<=120000 && (state.ends || state.left!==null);
   $("timer").textContent=timed?format(ms):"—";
-  $("hero").className=over?"over":warning?"warn":"";
+
   const label=!timed?"Sin duración asignada":over?"Tiempo cumplido":!state.ends?(state.left===null?"Listo para iniciar":"En pausa"):warning?"Avisar al responsable · quedan 2 min o menos":"En curso";
   if ($("state").textContent!==label) $("state").textContent=label;
   $("progress").value=timed?Math.min(1,Math.max(0,1-ms/duration())):0;
   const sermon=program[state.i][1].startsWith("Prédica ");
   const preparing=sermon && state.ends && ms>0 && ms<=300000;
+  const preview=Date.now()<counselPreviewUntil;
+  $("hero").className=[over?"over":warning?"warn":"",preparing || preview?"counsel-active":""].filter(Boolean).join(" ");
   const alert=$("counsel-alert");
-  const counselMessage=preparing ? "Avisa a los consejeros para que se alisten. Quedan 5 min o menos de prédica." : "";
+  const counselMessage=preparing ? "CONSEJERÍA · Avisa al equipo para que se aliste. Quedan 5 min o menos." :
+    preview ? "PRUEBA DE CONSEJERÍA · Consejeros, por favor alístense." : "";
   if (alert.textContent!==counselMessage) alert.textContent=counselMessage;
-  alert.hidden=!preparing;
+  alert.hidden=!counselMessage;
+  if (!state.ends && state.left===null || ms>300000) counselAnnounced=false;
+  if (preparing && !counselAnnounced) {
+    counselAnnounced=true;
+    if (voiceEnabled && !preview) speakCounsel();
+    else if (!voiceEnabled) play(960);
+  }
   if(state.ends && previous!==null){
     if(previous>0 && ms<=0) play(420);
     else if(previous>120000 && ms<=120000) play(740);
-    else if(preparing && previous>300000) play(960);
+
   }
   previous=state.ends?ms:null;
   const plannedStart=new Date(localDate.format(now)+"T"+program[state.i][0]+":00-05:00").getTime();
