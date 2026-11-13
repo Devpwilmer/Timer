@@ -2,12 +2,12 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Control de tiempos · IX EBJ 2026</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#0c1519;color:#edf6f4;font:16px system-ui,sans-serif}main{max-width:1040px;margin:auto;padding:22px 15px 40px}header,.split,.controls{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}header{margin-bottom:16px}h1{font-size:22px;margin:0}h2{margin:5px 0;font-size:clamp(23px,5vw,36px)}h3,p{margin:5px 0}.muted,small{color:#afc3c4}.card{border:1px solid #35494e;border-radius:16px;background:#17252a;padding:16px;margin:12px 0}#hero{text-align:center}#timer{font-size:clamp(58px,15vw,132px);line-height:1.12;letter-spacing:-.06em;font-weight:800;font-variant-numeric:tabular-nums;color:#91f5c6}#hero.warn #timer{color:#ffcf72}#hero.over #timer{color:#ffa6a6}progress{width:100%;height:10px;accent-color:#62dba7}button{background:#253a40;color:#fff;border:1px solid #50696d;border-radius:9px;padding:10px 12px;min-height:44px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #91f5c6;outline-offset:2px}button:disabled{opacity:.45;cursor:default}#toggle{background:#91f5c6;color:#092319;font-weight:750;flex:1} .controls{justify-content:center;margin-top:12px}#agenda{display:grid;gap:7px;margin-top:10px}.row{display:grid;grid-template-columns:3.15rem 1fr auto;gap:8px;text-align:left;align-items:center;width:100%}.row[aria-current=true]{border-color:#91f5c6;background:#1b4239}.agenda-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.move-controls{display:flex;gap:4px}.move-controls button{padding:6px 9px}.drag-handle{display:grid;place-items:center;width:40px;min-height:44px;border:1px solid #50696d;border-radius:9px;color:#91f5c6;touch-action:none;user-select:none;cursor:grab}.drag-handle:active{cursor:grabbing}.agenda-item.drop-target{outline:2px solid #91f5c6;border-radius:9px}.row time,#clock{color:#91f5c6;font-variant-numeric:tabular-nums}.row small{display:block}.split>*{margin:0}#offset{font-weight:700}#editor{text-align:left;border:1px solid #50696d;border-radius:12px;padding:14px;margin-top:14px;background:#0c1519}#editor label{display:block;margin:12px 0}#editor input{display:block;width:100%;min-height:44px;margin-top:4px;padding:8px;color:inherit;background:#17252a;border:1px solid #50696d;border-radius:8px;font:inherit}#edit-error{color:#ffa6a6}.over #state{color:#ffa6a6}.warn #state{color:#ffcf72}
-</style></head><body><main>
+#counsel-alert{padding:12px;border-radius:9px;background:#563c16;color:#ffe1a1;font-weight:700;margin:10px 0}</style></head><body><main>
 <header><div><h1>IX EBJ 2026</h1><small>Control de tiempos</small></div><div><span id="clock"></span> <small>Perú</small></div></header>
 <section class="card" id="hero" aria-labelledby="title">
 <small id="slot"></small><h2 id="title"></h2><p id="person" class="muted"></p><p id="note"></p>
 <div id="timer" role="timer" aria-label="Tiempo de la actividad"></div><strong id="state" aria-live="polite"></strong><progress id="progress" max="1" value="0" aria-label="Progreso del bloque"></progress>
-<p id="offset"></p>
+<p id="offset"></p><div role="status"><p id="counsel-alert" hidden></p></div>
 <div class="controls"><button id="prev">Anterior</button><button id="toggle">Iniciar</button><button id="next">Siguiente</button><button id="reset">Reiniciar</button><button id="edit" aria-controls="editor" aria-expanded="false">Editar horario</button></div>
 <section id="editor" aria-labelledby="edit-title" hidden><form id="edit-form" novalidate>
 <h3 id="edit-title">Editar horario</h3><p id="edit-name"></p>
@@ -116,11 +116,11 @@ function select(i) {
   save();
   render();
 }
-function play(isOver) {
+function play(frequency) {
   if (!sound || audio?.state !== "running") return;
   const oscillator = audio.createOscillator();
   const gain = audio.createGain();
-  oscillator.frequency.value=isOver?420:740;
+  oscillator.frequency.value=frequency;
   const now=audio.currentTime;
   gain.gain.setValueAtTime(.13,now);
   gain.gain.exponentialRampToValueAtTime(.001,now+.35);
@@ -140,9 +140,16 @@ function tick() {
   const label=!timed?"Sin duración asignada":over?"Tiempo cumplido":!state.ends?(state.left===null?"Listo para iniciar":"En pausa"):warning?"Avisar al responsable · quedan 2 min o menos":"En curso";
   if ($("state").textContent!==label) $("state").textContent=label;
   $("progress").value=timed?Math.min(1,Math.max(0,1-ms/duration())):0;
+  const sermon=program[state.i][1].startsWith("Prédica ");
+  const preparing=sermon && state.ends && ms>0 && ms<=300000;
+  const alert=$("counsel-alert");
+  const counselMessage=preparing ? "Avisa a los consejeros para que se alisten. Quedan 5 min o menos de prédica." : "";
+  if (alert.textContent!==counselMessage) alert.textContent=counselMessage;
+  alert.hidden=!preparing;
   if(state.ends && previous!==null){
-    if(previous>0 && ms<=0) play(true);
-    else if(previous>120000 && ms<=120000) play(false);
+    if(previous>0 && ms<=0) play(420);
+    else if(previous>120000 && ms<=120000) play(740);
+    else if(preparing && previous>300000) play(960);
   }
   previous=state.ends?ms:null;
   const plannedStart=new Date(localDate.format(now)+"T"+program[state.i][0]+":00-05:00").getTime();
@@ -383,8 +390,8 @@ $("sound").onclick=async ()=>{
     sound=!sound;
     $("sound").textContent=sound?"Sonido activo":"Sonido apagado";
     $("sound").setAttribute("aria-pressed",sound);
-    $("feedback").textContent=sound?"Aviso sonoro a los 2 minutos y al finalizar.":"";
-    if(sound) play(false);
+    $("feedback").textContent=sound?"Avisos sonoros a los 2 minutos y al finalizar, y a los 5 minutos durante las prédicas.":"";
+    if(sound) play(740);
   } catch { $("feedback").textContent="Este navegador no pudo activar el sonido."; }
 };
 async function keepAwake() {
