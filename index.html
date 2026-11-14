@@ -2,8 +2,13 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Control de tiempos · IX EBJ 2026</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#0c1519;color:#edf6f4;font:16px system-ui,sans-serif}main{max-width:1040px;margin:auto;padding:22px 15px 40px}header,.split,.controls{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}header{margin-bottom:16px}h1{font-size:22px;margin:0}h2{margin:5px 0;font-size:clamp(23px,5vw,36px)}h3,p{margin:5px 0}.muted,small{color:#afc3c4}.card{border:1px solid #35494e;border-radius:16px;background:#17252a;padding:16px;margin:12px 0}#hero{text-align:center}#timer{font-size:clamp(58px,15vw,132px);line-height:1.12;letter-spacing:-.06em;font-weight:800;font-variant-numeric:tabular-nums;color:#91f5c6}#hero.warn #timer{color:#ffcf72}#hero.over #timer{color:#ffa6a6}progress{width:100%;height:10px;accent-color:#62dba7}button{background:#253a40;color:#fff;border:1px solid #50696d;border-radius:9px;padding:10px 12px;min-height:44px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #91f5c6;outline-offset:2px}button:disabled{opacity:.45;cursor:default}#toggle{background:#91f5c6;color:#092319;font-weight:750;flex:1} .controls{justify-content:center;margin-top:12px}#agenda{display:grid;gap:7px;margin-top:10px}.row{display:grid;grid-template-columns:3.15rem 1fr auto;gap:8px;text-align:left;align-items:center;width:100%}.row[aria-current=true]{border-color:#91f5c6;background:#1b4239}.agenda-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.move-controls{display:flex;gap:4px}.move-controls button{padding:6px 9px}.drag-handle{display:grid;place-items:center;width:40px;min-height:44px;border:1px solid #50696d;border-radius:9px;color:#91f5c6;touch-action:none;user-select:none;cursor:grab}.drag-handle:active{cursor:grabbing}.agenda-item.drop-target{outline:2px solid #91f5c6;border-radius:9px}.row time,#clock{color:#91f5c6;font-variant-numeric:tabular-nums}.row small{display:block}.split>*{margin:0}#offset{font-weight:700}#editor{text-align:left;border:1px solid #50696d;border-radius:12px;padding:14px;margin-top:14px;background:#0c1519}#editor label{display:block;margin:12px 0}#editor input{display:block;width:100%;min-height:44px;margin-top:4px;padding:8px;color:inherit;background:#17252a;border:1px solid #50696d;border-radius:8px;font:inherit}#edit-error{color:#ffa6a6}.over #state{color:#ffa6a6}.warn #state{color:#ffcf72}
-#counsel-alert{padding:16px;border:2px solid #d4abff;border-radius:12px;background:#52267d;color:#fff;font-size:clamp(19px,4vw,28px);font-weight:800;margin:12px 0}#hero.counsel-active{border-color:#d4abff}#hero.counsel-active #timer{color:#d4abff}#live-message{background:#52267d;color:#fff;border:2px solid #d4abff;border-radius:12px;padding:16px;font-size:1.35rem;overflow-wrap:anywhere}#live input{width:100%;min-height:44px;margin:8px 0;padding:8px;font:inherit}</style></head><body><main>
+#counsel-alert{padding:16px;border:2px solid #d4abff;border-radius:12px;background:#52267d;color:#fff;font-size:clamp(19px,4vw,28px);font-weight:800;margin:12px 0}#hero.counsel-active{border-color:#d4abff}#hero.counsel-active #timer{color:#d4abff}#live-message{background:#52267d;color:#fff;border:2px solid #d4abff;border-radius:12px;padding:16px;font-size:1.35rem;overflow-wrap:anywhere}#live input{width:100%;min-height:44px;margin:8px 0;padding:8px;font:inherit}#projection{text-align:center}#projection:fullscreen{display:grid;align-content:center;background:#0c1519;padding:4vw}#projection-clock{font-size:clamp(76px,22vw,280px);line-height:1;font-weight:800;font-variant-numeric:tabular-nums;color:#91f5c6}#projection-clock[data-tone="warn"]{color:#ffcf72}#projection-clock[data-tone="over"]{color:#ffa6a6}#projection-person{font-size:clamp(22px,5vw,60px)}#open-projection{color:#91f5c6}</style></head><body><main>
 <header><div><h1>IX EBJ 2026</h1><small>Control de tiempos</small></div><div><span id="clock"></span> <small>Perú</small></div></header>
+<section id="projection" class="card" hidden>
+<p id="projection-title"></p><h2 id="projection-person"></h2>
+<p id="projection-clock" role="timer"></p><p id="projection-state"></p>
+<div><button id="projection-full">Pantalla completa</button></div>
+</section>
 <section class="card" id="live">
 <h2>Avisos en vivo</h2><p id="live-status" role="status"></p>
 <button id="live-start">Abrir sala de avisos</button>
@@ -29,7 +34,7 @@
 <small id="slot"></small><h2 id="title"></h2><p id="person" class="muted"></p><p id="note"></p>
 <div id="timer" role="timer" aria-label="Tiempo de la actividad"></div><strong id="state" aria-live="polite"></strong><progress id="progress" max="1" value="0" aria-label="Progreso del bloque"></progress>
 <p id="offset"></p><div role="status"><p id="counsel-alert" hidden></p></div>
-<div class="controls"><button id="prev">Anterior</button><button id="toggle">Iniciar</button><button id="next">Siguiente</button><button id="reset">Reiniciar</button><button id="edit" aria-controls="editor" aria-expanded="false">Editar horario</button></div>
+<div class="controls"><button id="prev">Anterior</button><button id="toggle">Iniciar</button><button id="next">Siguiente</button><button id="reset">Reiniciar</button><a id="open-projection" href="?pantalla=1" target="_blank" rel="noopener">Pantalla de expositores ↗</a><button id="edit" aria-controls="editor" aria-expanded="false">Editar horario</button></div>
 <section id="editor" aria-labelledby="edit-title" hidden><form id="edit-form" novalidate>
 <h3 id="edit-title">Editar horario</h3><p id="edit-name"></p>
 <label>Hora de inicio (Perú, 24 h)<input id="edit-time" type="text" placeholder="14:55" maxlength="5" aria-describedby="edit-format"></label>
@@ -132,7 +137,15 @@ function format(ms) {
   const seconds = ms < 0 ? Math.floor(-ms/1000) : Math.ceil(ms/1000);
   return (ms < 0 ? "+" : "") + digits(Math.floor(seconds/60)) + ":" + digits(seconds%60);
 }
+const projectionKey="ebj2026-pantalla-v1";
+function publishProjection() {
+  const [,title,minutes,person]=program[state.i];
+  try {
+    localStorage.setItem(projectionKey,JSON.stringify({title,minutes,person,ends:state.ends,left:state.left}));
+  } catch {}
+}
 function save() {
+  publishProjection();
   try { localStorage.setItem(key,JSON.stringify({...state,activity:original.indexOf(program[state.i])})); } catch {}
 }
 function select(i) {
@@ -500,9 +513,43 @@ $("wake").onclick=async ()=>{
   if(wakeWanted) await keepAwake();
   else await lock?.release();
 };
+function startProjection() {
+  $("timer-view").hidden=true;
+  $("live").hidden=true;
+  $("clock").parentElement.hidden=true;
+  $("projection").hidden=false;
+  let block=null;
+  function draw() {
+    $("projection-title").textContent=block?.title ?? "Esperando al coordinador";
+    $("projection-person").textContent=block?.person ?? "";
+    const ms=block?.ends ? block.ends-Date.now() : block?.left ?? (block?.minutes ?? 0)*60000;
+    $("projection-clock").textContent=block?.minutes ? format(ms) : "—";
+    $("projection-clock").dataset.tone=block?.minutes && ms<=0?"over":block?.ends && ms<=120000?"warn":"";
+    $("projection-state").textContent=!block ? "Abre la pantalla desde el temporizador en este mismo navegador." :
+      !block.minutes ? "Sin cuenta regresiva" : ms<=0 ? "Tiempo cumplido" :
+      block.ends ? "Tiempo restante" : block.left!==null ? "En pausa" : "Listo para iniciar";
+  }
+  try { block=JSON.parse(localStorage.getItem(projectionKey)); } catch {}
+  window.addEventListener("storage",event=>{
+    if (event.key!==projectionKey) return;
+    block=JSON.parse(event.newValue);
+    draw();
+  });
+  $("projection-full").onclick=async ()=>{
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await $("projection").requestFullscreen();
+    } catch { $("projection-full").textContent="Usa la pantalla completa del navegador"; }
+  };
+  draw();
+  setInterval(draw,1000);
+}
+const projectionMode=typeof location!=="undefined" && new URL(location.href).searchParams.get("pantalla")==="1";
 const receiverMode = typeof location!=="undefined" &&
   /^[a-f0-9]{24}$/.test(new URL(location.href).searchParams.get("sala")??"");
-if (receiverMode) {
+if (projectionMode) {
+  startProjection();
+} else if (receiverMode) {
   $("timer-view").hidden=true;
   $("clock").parentElement.hidden=true;
 } else {
@@ -510,6 +557,7 @@ if (receiverMode) {
     if(document.visibilityState==="visible" && wakeWanted && (!lock || lock.released)) keepAwake();
     tick();
   });
+  $("open-projection").onclick=publishProjection;
   renderAgenda();
   render();
   setInterval(tick,1000);
