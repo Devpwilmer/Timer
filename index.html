@@ -1,716 +1,114 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Control de tiempos · IX EBJ 2026</title>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Temporizador · Iglesia y eventos</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#0c1519;color:#edf6f4;font:16px system-ui,sans-serif}main{max-width:1040px;margin:auto;padding:22px 15px 40px}header,.split,.controls{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}header{margin-bottom:16px}h1{font-size:22px;margin:0}h2{margin:5px 0;font-size:clamp(23px,5vw,36px)}h3,p{margin:5px 0}.muted,small{color:#afc3c4}.card{border:1px solid #35494e;border-radius:16px;background:#17252a;padding:16px;margin:12px 0}#hero{text-align:center}#timer{font-size:clamp(58px,15vw,132px);line-height:1.12;letter-spacing:-.06em;font-weight:800;font-variant-numeric:tabular-nums;color:#91f5c6}#hero.warn #timer{color:#ffcf72}#hero.over #timer{color:#ffa6a6}progress{width:100%;height:10px;accent-color:#62dba7}button{background:#253a40;color:#fff;border:1px solid #50696d;border-radius:9px;padding:10px 12px;min-height:44px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #91f5c6;outline-offset:2px}button:disabled{opacity:.45;cursor:default}#toggle{background:#91f5c6;color:#092319;font-weight:750;flex:1} .controls{justify-content:center;margin-top:12px}#agenda{display:grid;gap:7px;margin-top:10px}.row{display:grid;grid-template-columns:3.15rem 1fr auto;gap:8px;text-align:left;align-items:center;width:100%}.row[aria-current=true]{border-color:#91f5c6;background:#1b4239}.agenda-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.move-controls{display:flex;gap:4px}.move-controls button{padding:6px 9px}.drag-handle{display:grid;place-items:center;width:40px;min-height:44px;border:1px solid #50696d;border-radius:9px;color:#91f5c6;touch-action:none;user-select:none;cursor:grab}.drag-handle:active{cursor:grabbing}.agenda-item.drop-target{outline:2px solid #91f5c6;border-radius:9px}.row time,#clock{color:#91f5c6;font-variant-numeric:tabular-nums}.row small{display:block}.split>*{margin:0}#offset{font-weight:700}#editor{text-align:left;border:1px solid #50696d;border-radius:12px;padding:14px;margin-top:14px;background:#0c1519}#editor label{display:block;margin:12px 0}#editor input{display:block;width:100%;min-height:44px;margin-top:4px;padding:8px;color:inherit;background:#17252a;border:1px solid #50696d;border-radius:8px;font:inherit}#edit-error{color:#ffa6a6}.over #state{color:#ffa6a6}.warn #state{color:#ffcf72}
-#counsel-alert{padding:16px;border:2px solid #d4abff;border-radius:12px;background:#52267d;color:#fff;font-size:clamp(19px,4vw,28px);font-weight:800;margin:12px 0}#hero.counsel-active{border-color:#d4abff}#hero.counsel-active #timer{color:#d4abff}#live-message{background:#52267d;color:#fff;border:2px solid #d4abff;border-radius:12px;padding:16px;font-size:1.35rem;overflow-wrap:anywhere}#live input{width:100%;min-height:44px;margin:8px 0;padding:8px;font:inherit}#projection{text-align:center}#projection:fullscreen{display:grid;align-content:center;background:#0c1519;padding:4vw}#projection-clock{font-size:clamp(76px,22vw,280px);line-height:1;font-weight:800;font-variant-numeric:tabular-nums;color:#91f5c6}#projection-clock[data-tone="warn"]{color:#ffcf72}#projection-clock[data-tone="over"]{color:#ffa6a6}#projection-person{font-size:clamp(22px,5vw,60px)}#open-projection{color:#91f5c6}</style></head><body><main>
-<header><div><h1>IX EBJ 2026</h1><small>Control de tiempos</small></div><div><span id="clock"></span> <small>Perú</small></div></header>
-<section id="projection" class="card" hidden>
-<p id="projection-title"></p><h2 id="projection-person"></h2>
-<p id="projection-clock" role="timer"></p><p id="projection-state"></p>
-<div><button id="projection-full">Pantalla completa</button></div>
-</section>
-<section class="card" id="live">
-<h2>Avisos en vivo</h2><p id="live-status" role="status"></p>
-<button id="live-start">Abrir sala de avisos</button>
-<div id="live-send" hidden>
-<p class="muted">Comparte el enlace del equipo. Mantén esta página abierta mientras coordinas.</p>
-<input id="live-link" readonly aria-label="Enlace para el equipo">
-<button id="live-copy">Copiar enlace</button>
-<form id="live-form">
-<label for="live-input">Mensaje para el equipo</label>
-<input id="live-input" maxlength="240" required placeholder="Escribe un aviso">
-<button id="live-submit" type="submit" disabled>Enviar aviso</button>
-<button id="live-counsel" type="button" disabled>Consejeros, alístense</button>
-</form><p id="live-result" role="status"></p>
-</div>
-<div id="live-receive" hidden>
-<p>Mantén esta página visible para recibir avisos.</p>
-<button id="live-enable">Activar y probar sonido y vibración</button>
-<p id="live-test" role="status"></p>
-</div>
-<p id="live-message" role="alert" hidden></p>
-</section>
-<div id="timer-view"><section class="card" id="hero" aria-labelledby="title">
-<small id="slot"></small><h2 id="title"></h2><p id="person" class="muted"></p><p id="note"></p>
-<div id="timer" role="timer" aria-label="Tiempo de la actividad"></div><strong id="state" aria-live="polite"></strong><progress id="progress" max="1" value="0" aria-label="Progreso del bloque"></progress>
-<p id="offset"></p><div role="status"><p id="counsel-alert" hidden></p></div>
-<div class="controls"><button id="prev">Anterior</button><button id="toggle">Iniciar</button><button id="next">Siguiente</button><button id="reset">Reiniciar</button><a id="open-projection" href="?pantalla=1" target="_blank" rel="noopener">Pantalla de expositores ↗</a><button id="edit" aria-controls="editor" aria-expanded="false">Editar horario</button></div>
-<section id="editor" aria-labelledby="edit-title" hidden><form id="edit-form" novalidate>
-<h3 id="edit-title">Editar horario</h3><p id="edit-name"></p>
-<label>Hora de inicio (Perú, 24 h)<input id="edit-time" type="text" placeholder="14:55" maxlength="5" aria-describedby="edit-format"></label>
-<small id="edit-format">Escribe la hora como 14:55.</small>
-<label>Duración (minutos)<input id="edit-minutes" type="number" inputmode="numeric" min="0" max="1439" step="1"></label>
-<p class="muted">El cambio se guarda en este navegador. Las demás actividades mantienen su horario.</p>
-<p id="edit-error" role="alert"></p><div class="controls"><button type="button" id="edit-cancel">Cancelar</button><button type="submit">Guardar cambios</button></div>
-</form></section>
-<div class="controls"><button id="voice" aria-pressed="false">Activar y probar alertas</button><button id="program-voice" aria-pressed="false">Activar voz del programa</button><button id="sound" aria-pressed="false">Sonido apagado</button><button id="wake" aria-pressed="false">Mantener pantalla activa</button></div><p id="feedback" role="status"></p>
-</section>
-<section class="card"><small>A continuación</small><h3 id="upnext"></h3><p class="muted" id="updetail"></p></section>
-<section class="card"><h3>Programa completo</h3><p class="muted">Toca una actividad para seleccionarla. Arrastra desde el asa ⠿ o usa las flechas para mover una actividad. El orden se guarda en este navegador.</p><div id="agenda"></div></section></div>
-
+*{box-sizing:border-box}body{margin:0;background:#0c1519;color:#eef7f3;font:17px system-ui,sans-serif}main{max-width:850px;margin:auto;padding:24px 16px}h1{font-size:21px;font-weight:600;margin:0 0 24px;color:#b6cbc2}.display{text-align:center;padding:24px 0}#name{font-size:clamp(24px,5vw,48px);margin:0 0 12px;overflow-wrap:anywhere}#clock{font-size:clamp(64px,18vw,160px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;color:#91f5c6;letter-spacing:-.04em}#clock.warn{color:#ffd174}#clock.over{color:#ffa6a6}#status{color:#c0ceca;min-height:26px}form{background:#17252a;padding:18px;border:1px solid #35494e;border-radius:14px}label{display:block;color:#c0ceca;font-size:15px}input{width:100%;margin:7px 0 16px;background:#0c1519;color:white;border:1px solid #50696d;border-radius:8px;padding:11px;font:inherit;min-height:44px}.time-inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.controls{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}button{padding:12px 16px;min-height:46px;background:#253a40;color:white;border:1px solid #50696d;border-radius:9px;font:inherit;cursor:pointer}#toggle{flex:1;background:#91f5c6;color:#092319;font-weight:700}button:focus-visible,input:focus-visible{outline:3px solid #91f5c6;outline-offset:3px}#message{color:#ffd174;min-height:24px}body.full main{max-width:none;padding:3vw}body.full h1,body.full form,body.full #settings,body.full #message{display:none}body.full .display{min-height:75vh;display:flex;flex-direction:column;justify-content:center}body.full #clock{font-size:clamp(80px,23vw,300px)}body.full #name{font-size:clamp(26px,5vw,64px)}
+</style></head><body><main>
+<h1>Temporizador · Iglesia y eventos</h1>
+<section class="display"><h2 id="name">Mi evento</h2><div id="clock" role="timer">45:00</div><p id="status" role="status">Listo para iniciar</p></section>
+<div class="controls"><button id="toggle">Iniciar</button><button id="reset">Reiniciar</button><button id="fullscreen">Pantalla completa</button></div>
+<form id="setup" novalidate>
+<label>Nombre del evento o participación<input id="title" maxlength="100" value="Mi evento" placeholder="Prédica, culto, conferencia…"></label>
+<div class="time-inputs"><label>Horas<input id="hours" type="number" min="0" max="23" step="1" value="0" inputmode="numeric"></label><label>Minutos<input id="minutes" type="number" min="0" max="59" step="1" value="45" inputmode="numeric"></label><label>Segundos<input id="seconds" type="number" min="0" max="59" step="1" value="0" inputmode="numeric"></label></div>
+<button type="submit">Aplicar duración</button>
+</form>
+<div id="settings" class="controls"><button id="sound" aria-pressed="false">Activar y probar sonido</button></div><p id="message" role="status"></p>
 </main><script>
-const program = [
-["09:57","Apertura (Oración)",3,"Jeyson Castromonte","","3 minutos de oración y presentación"],
-["10:00","Alabanza 1",20,"Equipo EBJ","A/P"],
-["10:20","Testimonio 1",8,"José Bolívar","A/P"],
-["10:28","Prédica 1: Tema introductorio",45,"Pr. Giorgio Romani","A/P"],
-["11:13","Presentación 1",5,"ATOCRI","A/P","CREHO"],
-["11:18","Presentación 2",5,"CREHO","A/P","Seminario Teológico Bautista de Lima"],
-["11:23","Alabanza 2",15,"Equipo EBJ","A/P"],
-["11:38","Prédica 2",45,"Pr. Enoc Príncipe","A/P","El quebrantado que Dios usa: Él llama al débil y lo reviste de poder"],
-["12:23","Presentación 3",5,"CBUI","A/P","Editorial Sembrando"],
-["12:28","Testimonio 2",8,"Pr. Alex Hurtado","","Candy Surret"],
-["12:36","Dinámica 1 (Activadora)",16,"Claudia Retuerto y Saraí Ipanaque","A/P"],
-["12:52","Presentación 4",5,"VIA","A/P","Seminario Bíblico Bautista de Lima - SBBL"],
-["12:57","Almuerzo + Feria de Stands",50,"","Hall","Tiempo libre, oportunidad para moverse, conversar, visitar espacios."],
-["13:47","Alabanza 3 (Reactivadora/Post-almuerzo)",15,"Equipo EBJ","A/P","Músicas dinámicas para reactivar cuerpo y mente."],
-["14:02","Prédica 3",45,"Pr. Jesús Hurtado","A/P","Separado para Dios: identidad antes que función"],
-["14:47","Ofrendas",8,"Dylan y Ujieres","A/P"],
-["14:55","Preguntas y respuestas",60,"David Valverde","A/P","Espacio interactivo de diálogo con los ponentes."],
-["15:55","Testimonio 3",7,"Pr. Marco Senmache","A/P"],
-["16:02","Presentación 5",5,"SBTL","A/P","Conexión Bíblica Universitaria Internacional - CBUI"],
-["16:07","Premiación",10,"David Valverde","A/P"],
-["16:17","Presentación 6",5,"MOVIDA","A/P","Misión Peruana a Toda Criatura - ATOCRI"],
-["16:22","Alabanza 4 (Reflexiva)",15,"Plenitud","A/P"],
-["16:37","Prédica 4: Llamado a la acción",45,"Pr. Daniel Calle","A/P","Hasta el fin: fieles al llamado hasta la corona"],
-["17:22","Alabanza 5 (Celebrativa Final)",15,"Plenitud","A/P"],
-["17:37","Despedida final",3,"David Valverde","A/P","Avisos y cierre formal."],
-["17:40","Break",0,"","Hall"]
-];
-const $ = id => document.getElementById(id);
-const key = "ebj2026-timer-v1";
-const editsKey = "ebj2026-horarios-v1";
-const validTime = time => typeof time === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time);
-const validMinutes = minutes => Number.isInteger(minutes) && minutes>=0 && minutes<=1439;
-let edits = {};
+const $=id=>document.getElementById(id);
+const key="iglesia-eventos-timer-v1";
+let state={title:"Mi evento",duration:2700000,left:2700000,end:0};
 try {
-  const savedEdits = JSON.parse(localStorage.getItem(editsKey)) ?? {};
-  program.forEach((item,i)=>{
-    const edit = savedEdits[i];
-    if (!edit || !validTime(edit.time) || !validMinutes(edit.minutes)) return;
-    edits[i]=edit;
-    item[0]=edit.time;
-    item[2]=edit.minutes;
-  });
+ const saved=JSON.parse(localStorage.getItem(key));
+ if(saved && typeof saved.title==="string" && saved.title.length<=100 &&
+ Number.isFinite(saved.duration) && saved.duration>0 && saved.duration<=86399000 &&
+ Number.isFinite(saved.left) && Number.isFinite(saved.end) && saved.end>=0) state=saved;
 } catch {}
-const empty = i => ({i, ends:0, left:null});
-const orderKey = "ebj2026-orden-v1";
-const original = [...program];
-try {
-  const order = JSON.parse(localStorage.getItem(orderKey));
-  if (Array.isArray(order) && order.length===original.length && new Set(order).size===original.length &&
-      order.every(i=>Number.isInteger(i) && original[i])) {
-    program.splice(0,program.length,...order.map(i=>original[i]));
-  }
-} catch {}
-let state = empty(0);
-try {
-  const saved = JSON.parse(localStorage.getItem(key));
-  if (saved) {
-    const i=Number.isInteger(saved.activity) ? program.indexOf(original[saved.activity]) : saved.i;
-    if (Number.isInteger(i) && program[i]) state={...saved,i};
-  }
-} catch {}
-let previous = null;
-let voiceEnabled = false;
-let programVoice = false;
-let vibrationEnabled = false;
-let counselAnnounced = false;
-let counselPreviewUntil = 0;
-const counselPhrase = "Consejeros, por favor alístense. Faltan cinco minutos para terminar la prédica.";
-let audio = null;
-let sound = false;
-let wakeWanted = false;
-let lock = null;
-const peru = new Intl.DateTimeFormat("es-PE",{timeZone:"America/Lima",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"});
-const localDate = new Intl.DateTimeFormat("en-CA",{timeZone:"America/Lima",year:"numeric",month:"2-digit",day:"2-digit"});
-let editing = null;
-const duration = () => program[state.i][2]*60000;
-const remaining = () => state.ends ? state.ends-Date.now() : state.left ?? duration();
-const digits = n => String(n).padStart(2,"0");
-function plannedEnd(time,minutes) {
-  const [hours,startMinutes]=time.split(":").map(Number);
-  const end=hours*60+startMinutes+minutes;
-  return digits(Math.floor(end/60)%24)+":"+digits(end%60)+(end>=1440?" (+1 día)":"");
+let audio=null;
+let sound=false;
+let previous=null;
+function remaining(){return state.end?state.end-Date.now():state.left}
+function save(){
+ try {localStorage.setItem(key,JSON.stringify(state))}
+ catch {$("message").textContent="El navegador no pudo guardar el temporizador."}
 }
-function format(ms) {
-  const seconds = ms < 0 ? Math.floor(-ms/1000) : Math.ceil(ms/1000);
-  return (ms < 0 ? "+" : "") + digits(Math.floor(seconds/60)) + ":" + digits(seconds%60);
+function beep(){
+ if(!sound || audio?.state!=="running")return;
+ const tone=audio.createOscillator(),gain=audio.createGain();
+ tone.frequency.value=660;
+ gain.gain.setValueAtTime(.16,audio.currentTime);
+ gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.6);
+ tone.connect(gain).connect(audio.destination);
+ tone.start();tone.stop(audio.currentTime+.6);
 }
-const projectionKey="ebj2026-pantalla-v1";
-function publishProjection() {
-  const [,title,minutes,person]=program[state.i];
-  try {
-    localStorage.setItem(projectionKey,JSON.stringify({title,minutes,person,ends:state.ends,left:state.left}));
-  } catch {}
+function tick(){
+ const ms=remaining();
+ const s=ms<0?Math.floor(-ms/1000):Math.ceil(ms/1000);
+ const h=Math.floor(s/3600),m=Math.floor(s%3600/60),sec=s%60;
+ const pad=n=>String(n).padStart(2,"0");
+ $("clock").textContent=(ms<0?"+":"")+(h?pad(h)+":":"")+pad(m)+":"+pad(sec);
+ $("clock").className=ms<=0?"over":ms<=120000 && (state.end || state.left!==state.duration)?"warn":"";
+ const label=ms<=0?"Tiempo cumplido":state.end?"Tiempo restante":state.left===state.duration?"Listo para iniciar":"En pausa";
+ if($("status").textContent!==label)$("status").textContent=label;
+ if(state.end && previous!==null && previous>0 && ms<=0)beep();
+ previous=state.end?ms:null;
 }
-function save() {
-  publishProjection();
-  try { localStorage.setItem(key,JSON.stringify({...state,activity:original.indexOf(program[state.i])})); } catch {}
+function render(){
+ $("name").textContent=state.title;
+ $("toggle").textContent=state.end?"Pausar":state.left===state.duration?"Iniciar":"Reanudar";
+ tick();
 }
-function select(i) {
-  if (i===state.i || !program[i]) return;
-  if (state.ends && !confirm("¿Cambiar de actividad y cerrar el timer actual?")) return;
-  state=empty(i);
-  previous=null;
-  save();
-  render();
-}
-function play(frequency) {
-  if (!sound || audio?.state !== "running") return;
-  const oscillator = audio.createOscillator();
-  const gain = audio.createGain();
-  oscillator.frequency.value=frequency;
-  const now=audio.currentTime;
-  gain.gain.setValueAtTime(.13,now);
-  gain.gain.exponentialRampToValueAtTime(.001,now+.35);
-  oscillator.connect(gain).connect(audio.destination);
-  oscillator.start(now);
-  oscillator.stop(now+.36);
-}
-function vibrateCounsel() {
-  return typeof navigator.vibrate==="function" && navigator.vibrate([250,120,250,120,450]);
-}
-function speak(phrase) {
-  const utterance=new SpeechSynthesisUtterance(phrase);
-  utterance.lang="es-PE";
-  const voices=window.speechSynthesis.getVoices();
-  utterance.voice=voices.find(voice=>voice.lang.toLowerCase()==="es-pe") ??
-    voices.find(voice=>voice.lang.toLowerCase().startsWith("es-")) ?? null;
-  utterance.onerror=()=>{
-    $("feedback").textContent="El navegador no pudo reproducir la voz. El aviso visual sigue disponible.";
-  };
-  window.speechSynthesis.speak(utterance);
-}
-$("voice").onclick=()=>{
-  counselPreviewUntil=Date.now()+8000;
-  vibrationEnabled=vibrateCounsel();
-  if (window.speechSynthesis && typeof SpeechSynthesisUtterance==="function") {
-    voiceEnabled=true;
-    speak(counselPhrase);
-  }
-  $("voice").textContent="Probar alertas de consejería";
-  $("voice").setAttribute("aria-pressed",String(voiceEnabled || vibrationEnabled));
-  $("feedback").textContent=(voiceEnabled?"Voz activada. ":"Voz no disponible. ")+
-    (vibrationEnabled?"Vibración activada.":"Vibración no disponible en este navegador.");
-  tick();
-};
-function nextAnnouncement() {
-  const next=program[state.i+1];
-  return next ? "Sigue "+next[1]+(next[3]?". Responsable: "+next[3]:"")+"." : "Es la última actividad del programa.";
-}
-$("program-voice").onclick=()=>{
-  if (!window.speechSynthesis || typeof SpeechSynthesisUtterance!=="function") {
-    $("feedback").textContent="Este navegador no admite el aviso por voz.";
-    return;
-  }
-  programVoice=!programVoice;
-  $("program-voice").setAttribute("aria-pressed",String(programVoice));
-  $("program-voice").textContent=programVoice?"Desactivar voz del programa":"Activar voz del programa";
-  if (programVoice) speak(nextAnnouncement());
-};
-function tick() {
-  const now=new Date();
-  $("clock").textContent=peru.format(now);
-  const ms=remaining();
-  const timed=duration()>0;
-  const over=timed && ms<=0;
-  const warning=timed && !over && ms<=120000 && (state.ends || state.left!==null);
-  $("timer").textContent=timed?format(ms):"—";
-
-  const label=!timed?"Sin duración asignada":over?"Tiempo cumplido":!state.ends?(state.left===null?"Listo para iniciar":"En pausa"):warning?"Avisar al responsable · quedan 2 min o menos":"En curso";
-  if ($("state").textContent!==label) $("state").textContent=label;
-  $("progress").value=timed?Math.min(1,Math.max(0,1-ms/duration())):0;
-  const sermon=program[state.i][1].startsWith("Prédica ");
-  const preparing=sermon && state.ends && ms>0 && ms<=300000;
-  const preview=Date.now()<counselPreviewUntil;
-  $("hero").className=[over?"over":warning?"warn":"",preparing || preview?"counsel-active":""].filter(Boolean).join(" ");
-  const alert=$("counsel-alert");
-  const counselMessage=preparing ? "CONSEJERÍA · Avisa al equipo para que se aliste. Quedan 5 min o menos." :
-    preview ? "PRUEBA DE CONSEJERÍA · Consejeros, por favor alístense." : "";
-  if (alert.textContent!==counselMessage) alert.textContent=counselMessage;
-  alert.hidden=!counselMessage;
-  if (!state.ends && state.left===null || ms>300000) counselAnnounced=false;
-  if (preparing && !counselAnnounced) {
-    counselAnnounced=true;
-    if (vibrationEnabled && !preview) vibrateCounsel();
-    if (voiceEnabled && !preview) speak(counselPhrase);
-    else if (!voiceEnabled) play(960);
-  }
-  if(state.ends && previous!==null){
-    if(previous>0 && ms<=0) {
-      if (programVoice) speak("Tiempo cumplido.");
-      else play(420);
-    } else if(previous>120000 && ms<=120000) {
-      if (programVoice) speak((duration()<120000?"Quedan menos de dos minutos. ":"Quedan dos minutos. ")+nextAnnouncement());
-      else play(740);
-    }
-
-  }
-  previous=state.ends?ms:null;
-  const plannedStart=new Date(localDate.format(now)+"T"+program[state.i][0]+":00-05:00").getTime();
-  const finish=plannedStart+duration();
-  const delta=state.ends-finish;
-  $("offset").textContent=state.ends && timed ? "Fin estimado "+peru.format(new Date(state.ends)).slice(0,5)+" · "+(Math.abs(delta)<60000?"En horario":Math.floor(Math.abs(delta)/60000)+" min "+(delta>0?"de atraso":"de adelanto")):"";
-}
-function render() {
-  if (editing && editing!==program[state.i]) closeEditor();
-  const [time,title,min,person,place,note]=program[state.i];
-  const following=program[state.i+1];
-  $("slot").textContent=min ? time+"–"+plannedEnd(time,min)+" · "+min+" min" : time;
-  $("title").textContent=title;
-  $("person").textContent=[person,place].filter(Boolean).join(" · ");
-  $("note").textContent=note??"";
-  $("upnext").textContent=following ? following[0]+" · "+following[1] : "Fin del programa";
-  $("updetail").textContent=following ? [following[3],following[4],following[2]?following[2]+" min":""].filter(Boolean).join(" · ") : "";
-  $("prev").disabled=state.i===0;
-  $("next").disabled=!following;
-  $("toggle").disabled=!min;
-  $("reset").disabled=!state.ends && state.left===null;
-  $("toggle").textContent=state.ends?"Pausar":state.left!==null?"Reanudar":"Iniciar";
-  [...$("agenda").children].forEach((item,i)=>item.firstElementChild.setAttribute("aria-current",i===state.i?"true":"false"));
-  tick();
-}
-function move(from,to) {
-  if (from===to || !program[from] || !program[to]) return;
-  const active=program[state.i];
-  const [item]=program.splice(from,1);
-  program.splice(to,0,item);
-  state.i=program.indexOf(active);
-  try { localStorage.setItem(orderKey,JSON.stringify(program.map(item=>original.indexOf(item)))); }
-  catch { $("feedback").textContent="El orden se aplicó. Este navegador no pudo guardarlo."; }
-  save();
-  renderAgenda();
-  render();
-}
-function renderAgenda() {
-  const agenda=$("agenda");
-  agenda.replaceChildren();
-  let dragged=null;
-  program.forEach(([time,title,min,person,place],i)=>{
-  const row=document.createElement("button");
-  row.className="row";
-  const start=document.createElement("time");
-  start.textContent=time;
-  const description=document.createElement("span");
-  description.textContent=title;
-  const detail=document.createElement("small");
-  detail.textContent=[person,place].filter(Boolean).join(" · ");
-  description.append(detail);
-  const length=document.createElement("small");
-  length.textContent=min?min+" min":"—";
-  row.append(start,description,length);
-  row.onclick=()=>{select(i); if(state.i===i) $("hero").scrollIntoView({block:"start"});};
-    const item=document.createElement("div");
-    item.className="agenda-item";
-    row.draggable=true;
-    row.ondragstart=event=>{
-      dragged=i;
-      event.dataTransfer.effectAllowed="move";
-      event.dataTransfer.setData("text/plain",title);
-    };
-    row.ondragend=()=>{
-      dragged=null;
-      agenda.querySelector(".drop-target")?.classList.remove("drop-target");
-    };
-    item.ondragover=event=>{
-      if (dragged===null || dragged===i) return;
-      event.preventDefault();
-      item.classList.add("drop-target");
-    };
-    item.ondragleave=event=>{
-      if (!item.contains(event.relatedTarget)) item.classList.remove("drop-target");
-    };
-    item.ondrop=event=>{
-      if (dragged===null) return;
-      event.preventDefault();
-      move(dragged,i);
-    };
-    const controls=document.createElement("div");
-    controls.className="move-controls";
-    const handle=document.createElement("span");
-    handle.className="drag-handle";
-    handle.textContent="⠿";
-    handle.title="Arrastrar "+title;
-    handle.setAttribute("aria-hidden","true");
-    let pointer=null;
-    let target=null;
-    let scrollFrame=0;
-    let x=0;
-    let y=0;
-    let startY=0;
-    function highlight() {
-      const hit=document.elementFromPoint(x,y)?.closest(".agenda-item");
-      const index=hit ? Array.prototype.indexOf.call(agenda.children,hit) : -1;
-      if (index<0 || index===target) return;
-      agenda.children[target]?.classList.remove("drop-target");
-      target=index;
-      if (index!==i) hit.classList.add("drop-target");
-    }
-    function scrollDrag() {
-      const edge=64;
-      const step=y<edge ? -10 : y>window.innerHeight-edge ? 10 : 0;
-      if (step) {
-        window.scrollBy(0,step);
-        highlight();
-      }
-      scrollFrame=requestAnimationFrame(scrollDrag);
-    }
-    handle.onpointerdown=event=>{
-      if (!event.isPrimary || event.button!==0) return;
-      pointer=event.pointerId;
-      startY=y=event.clientY;
-      x=event.clientX;
-      handle.setPointerCapture(pointer);
-    };
-    handle.onpointermove=event=>{
-      if (event.pointerId!==pointer) return;
-      x=event.clientX;
-      y=event.clientY;
-      if (!scrollFrame && Math.abs(y-startY)<6) return;
-      highlight();
-      if (!scrollFrame) scrollFrame=requestAnimationFrame(scrollDrag);
-    };
-    function finishDrag(event,apply) {
-      if (event.pointerId!==pointer) return;
-      pointer=null;
-      cancelAnimationFrame(scrollFrame);
-      scrollFrame=0;
-      const destination=target;
-      target=null;
-      agenda.children[destination]?.classList.remove("drop-target");
-      if (apply && destination!==null) move(i,destination);
-    }
-    handle.onpointerup=event=>finishDrag(event,true);
-    handle.onpointercancel=handle.onlostpointercapture=event=>finishDrag(event,false);
-    controls.append(handle);
-    for (const [direction,icon,label] of [[-1,"↑","Subir"],[1,"↓","Bajar"]]) {
-      const button=document.createElement("button");
-      button.textContent=icon;
-      button.setAttribute("aria-label",label+" "+title);
-      button.disabled=!program[i+direction];
-      button.onclick=()=>{
-        move(i,i+direction);
-        const movedControls=agenda.children[i+direction].lastElementChild;
-        const movedButton=movedControls.children[direction===-1?1:2];
-        (movedButton.disabled?movedControls.children[direction===-1?2:1]:movedButton).focus();
-      };
-      controls.append(button);
-    }
-    item.append(row,controls);
-    agenda.append(item);
-  });
-}
-function closeEditor() {
-  editing=null;
-  $("editor").hidden=true;
-  $("edit").setAttribute("aria-expanded","false");
-}
-$("edit").onclick=()=>{
-  if (editing) {
-    closeEditor();
-    return;
-  }
-  editing=program[state.i];
-  const [time,title,min]=editing;
-  $("edit-name").textContent=title;
-  $("edit-time").value=time;
-  $("edit-minutes").value=min;
-  $("edit-error").textContent="";
-  $("editor").hidden=false;
-  $("edit").setAttribute("aria-expanded","true");
-  $("edit-time").focus();
-};
-$("edit-cancel").onclick=()=>{
-  closeEditor();
-  $("edit").focus();
-};
-$("edit-form").onsubmit=event=>{
-  event.preventDefault();
-  const time=$("edit-time").value.trim().replace(/^(\d):/,"0$1:");
-  const minutes=$("edit-minutes").valueAsNumber;
-  if (!editing) return;
-  if (!validTime(time) || !validMinutes(minutes)) {
-    const badTime=!validTime(time);
-    $("edit-error").textContent=badTime?"Escribe una hora válida, por ejemplo 09:55.":"Escribe una duración entera entre 0 y 1439 minutos.";
-    $(badTime?"edit-time":"edit-minutes").focus();
-    return;
-  }
-  const item=program[state.i];
-  const difference=(minutes-item[2])*60000;
-  if (minutes===0 || item[2]===0) state=empty(state.i);
-  else if (state.ends) state.ends+=difference;
-  else if (state.left!==null) state.left+=difference;
-  item[0]=time;
-  item[2]=minutes;
-  edits[original.indexOf(item)]={time,minutes};
-  let saved=true;
-  try { localStorage.setItem(editsKey,JSON.stringify(edits)); }
-  catch { saved=false; }
-  save();
-  renderAgenda();
-  closeEditor();
-  $("edit").focus();
-  $("feedback").textContent=saved?"Horario guardado.":"Horario aplicado. Este navegador no pudo guardarlo.";
-  render();
-};
-$("prev").onclick=()=>select(state.i-1);
-$("next").onclick=()=>{
-  if (!program[state.i+1]) return;
-  state=empty(state.i+1);
-  previous=null;
-  save();
-  render();
+$("title").value=state.title;
+$("hours").value=Math.floor(state.duration/3600000);
+$("minutes").value=Math.floor(state.duration%3600000/60000);
+$("seconds").value=Math.floor(state.duration%60000/1000);
+$("setup").onsubmit=event=>{
+ event.preventDefault();
+ const fields=[$("hours"),$("minutes"),$("seconds")];
+ const values=fields.map(field=>field.valueAsNumber);
+ const limits=[23,59,59];
+ const bad=values.findIndex((value,i)=>!Number.isInteger(value)||value<0||value>limits[i]);
+ const duration=(values[0]*3600+values[1]*60+values[2])*1000;
+ if(bad>=0 || duration<=0){
+  $("message").textContent="Ingresa horas de 0 a 23, minutos y segundos de 0 a 59. El tiempo debe ser mayor que cero.";
+  fields[bad>=0?bad:1].focus();return;
+ }
+ const delta=duration-state.duration;
+ if(state.end)state.end+=delta;
+ else if(state.left===state.duration)state.left=duration;
+ else state.left+=delta;
+ state.title=$("title").value.trim()||"Mi evento";
+ state.duration=duration;
+ previous=null;
+ $("message").textContent="Duración aplicada.";
+ save();render();
 };
 $("toggle").onclick=()=>{
-  if(state.ends) state={...state,left:remaining(),ends:0};
-  else {
-    const fresh=state.left===null;
-    state={...state,ends:Date.now()+remaining(),left:null};
-    previous=fresh?Math.max(duration(),120001):null;
-  }
-  save();
-  render();
+ if(state.end){state.left=remaining();state.end=0}
+ else state.end=Date.now()+state.left;
+ previous=null;save();render();
 };
 $("reset").onclick=()=>{
-  if (!confirm("¿Reiniciar el tiempo de esta actividad?")) return;
-  state=empty(state.i);
-  previous=null;
-  save();
-  render();
+ if(!confirm("¿Volver a la duración configurada?"))return;
+ state.end=0;state.left=state.duration;previous=null;save();render();
 };
-$("sound").onclick=async ()=>{
-  try {
-    if (!sound) {
-      const Audio=window.AudioContext||window.webkitAudioContext;
-      audio ??= new Audio();
-      await audio.resume();
-    }
-    sound=!sound;
-    $("sound").textContent=sound?"Sonido activo":"Sonido apagado";
-    $("sound").setAttribute("aria-pressed",sound);
-    $("feedback").textContent=sound?"Avisos sonoros a los 2 minutos y al finalizar, y a los 5 minutos durante las prédicas.":"";
-    if(sound) play(740);
-  } catch { $("feedback").textContent="Este navegador no pudo activar el sonido."; }
+$("sound").onclick=async()=>{
+ try {
+  const Audio=window.AudioContext||window.webkitAudioContext;
+  audio??=new Audio();await audio.resume();sound=!sound;
+  $("sound").textContent=sound?"Desactivar sonido":"Activar y probar sonido";
+  $("sound").setAttribute("aria-pressed",String(sound));
+  if(sound)beep();
+ }catch{$("message").textContent="Este navegador no pudo activar el sonido."}
 };
-async function keepAwake() {
-  try {
-    lock=await navigator.wakeLock.request("screen");
-    $("wake").setAttribute("aria-pressed","true");
-    $("wake").textContent="Pantalla activa";
-    $("feedback").textContent="";
-    lock.addEventListener("release",()=>{
-      $("wake").setAttribute("aria-pressed","false");
-      $("wake").textContent="Mantener pantalla activa";
-    });
-  } catch {
-    wakeWanted=false;
-    $("feedback").textContent="El navegador no pudo mantener la pantalla activa. Puedes ajustar el bloqueo automático del equipo.";
-  }
-}
-$("wake").onclick=async ()=>{
-  wakeWanted=!wakeWanted;
-  if(wakeWanted) await keepAwake();
-  else await lock?.release();
+$("fullscreen").onclick=async()=>{
+ try {
+  if(document.fullscreenElement)await document.exitFullscreen();
+  else await document.documentElement.requestFullscreen();
+ }catch{$("message").textContent="Usa la opción de pantalla completa de tu navegador."}
 };
-function startProjection() {
-  $("timer-view").hidden=true;
-  $("live").hidden=true;
-  $("clock").parentElement.hidden=true;
-  $("projection").hidden=false;
-  let block=null;
-  function draw() {
-    $("projection-title").textContent=block?.title ?? "Esperando al coordinador";
-    $("projection-person").textContent=block?.person ?? "";
-    const ms=block?.ends ? block.ends-Date.now() : block?.left ?? (block?.minutes ?? 0)*60000;
-    $("projection-clock").textContent=block?.minutes ? format(ms) : "—";
-    $("projection-clock").dataset.tone=block?.minutes && ms<=0?"over":block?.ends && ms<=120000?"warn":"";
-    $("projection-state").textContent=!block ? "Abre la pantalla desde el temporizador en este mismo navegador." :
-      !block.minutes ? "Sin cuenta regresiva" : ms<=0 ? "Tiempo cumplido" :
-      block.ends ? "Tiempo restante" : block.left!==null ? "En pausa" : "Listo para iniciar";
-  }
-  try { block=JSON.parse(localStorage.getItem(projectionKey)); } catch {}
-  window.addEventListener("storage",event=>{
-    if (event.key!==projectionKey) return;
-    block=JSON.parse(event.newValue);
-    draw();
-  });
-  $("projection-full").onclick=async ()=>{
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await $("projection").requestFullscreen();
-    } catch { $("projection-full").textContent="Usa la pantalla completa del navegador"; }
-  };
-  draw();
-  setInterval(draw,1000);
-}
-const projectionMode=typeof location!=="undefined" && new URL(location.href).searchParams.get("pantalla")==="1";
-const receiverMode = typeof location!=="undefined" &&
-  /^[a-f0-9]{24}$/.test(new URL(location.href).searchParams.get("sala")??"");
-if (projectionMode) {
-  startProjection();
-} else if (receiverMode) {
-  $("timer-view").hidden=true;
-  $("clock").parentElement.hidden=true;
-} else {
-  document.addEventListener("visibilitychange",()=>{
-    if(document.visibilityState==="visible" && wakeWanted && (!lock || lock.released)) keepAwake();
-    tick();
-  });
-  $("open-projection").onclick=publishProjection;
-  renderAgenda();
-  render();
-  setInterval(tick,1000);
-}
-</script>
-<script>
-(() => {
-  const get=id=>document.getElementById(id);
-  const setStatus=message=>get("live-status").textContent=message;
-  const room=new URL(location.href).searchParams.get("sala");
-  const prefix="ebj26-";
-  const connections=new Set();
-  let peer, incoming, retry, deadline, library, audioReady=false, senderReady=false;
-  function loadPeer() {
-    if (window.Peer) return Promise.resolve();
-    return library ??= new Promise((resolve,reject)=>{
-      const script=document.createElement("script");
-      script.src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js";
-      script.onload=resolve;
-      script.onerror=()=>{library=null;script.remove();reject(new Error("PeerJS"));};
-      document.head.append(script);
-    });
-  }
-  function announce(message) {
-    const panel=get("live-message");
-    panel.hidden=false;
-    panel.textContent=message;
-    if (!audioReady) return;
-    if (typeof navigator.vibrate==="function") navigator.vibrate([250,120,250,120,450]);
-    if (window.speechSynthesis && typeof SpeechSynthesisUtterance==="function") speak(message);
-  }
-  function updateSender() {
-    setStatus(senderReady ? "Sala abierta · "+connections.size+" celulares conectados" : "Reconectando la sala…");
-    get("live-submit").disabled=get("live-counsel").disabled=!senderReady || !connections.size;
-  }
-  function send(message) {
-    if (!message || !senderReady || !connections.size) return;
-    let count=0;
-    for (const connection of connections) {
-      if (!connection.open) continue;
-      try { connection.send({type:"aviso",message}); count++; } catch {}
-    }
-    get("live-result").textContent=count ? "Enviado a "+count+" conexiones." : "No se pudo enviar. Revisa la conexión.";
-  }
-  get("live-start").onclick=async ()=>{
-    const button=get("live-start");
-    button.disabled=true;
-    setStatus("Abriendo sala…");
-    try {
-      await loadPeer();
-      let code=sessionStorage.getItem("ebj26-sala");
-      if (!/^[a-f0-9]{24}$/.test(code??"")) {
-        code=Array.from(crypto.getRandomValues(new Uint8Array(12)),n=>n.toString(16).padStart(2,"0")).join("");
-        sessionStorage.setItem("ebj26-sala",code);
-      }
-      peer=new Peer(prefix+code);
-      peer.on("open",()=>{
-        const url=new URL(location.href);
-        url.searchParams.set("sala",code);
-        get("live-link").value=url.href;
-        get("live-send").hidden=false;
-        button.hidden=true;
-        senderReady=true;
-        updateSender();
-      });
-      peer.on("connection",connection=>{
-        connection.on("open",()=>{connections.add(connection);updateSender();});
-        const remove=()=>{connections.delete(connection);updateSender();};
-        connection.on("close",remove);
-        connection.on("error",remove);
-      });
-      peer.on("disconnected",()=>{
-        senderReady=false;
-        updateSender();
-        if (!peer.destroyed) peer.reconnect();
-      });
-      peer.on("error",error=>{
-        if (error.type==="peer-unavailable") return;
-        setStatus("No se pudo abrir la sala. Comprueba tu conexión o cierra otra pestaña con la misma sala.");
-        if (!senderReady) {peer.destroy();connections.clear();get("live-send").hidden=true;button.hidden=false;button.disabled=false;}
-      });
-    } catch {
-      setStatus("No se pudo conectar. Revisa internet y vuelve a intentar.");
-      button.disabled=false;
-    }
-  };
-  get("live-copy").onclick=async ()=>{
-    try {await navigator.clipboard.writeText(get("live-link").value);get("live-result").textContent="Enlace copiado.";}
-    catch {get("live-link").select();get("live-result").textContent="Copia el enlace seleccionado.";}
-  };
-  get("live-form").onsubmit=event=>{
-    event.preventDefault();
-    send(get("live-input").value.trim());
-  };
-  get("live-counsel").onclick=()=>send("Consejeros, por favor alístense.");
-  get("live-enable").onclick=()=>{
-    audioReady=true;
-    announce("Prueba de aviso. Alertas activadas.");
-    get("live-test").textContent=typeof navigator.vibrate==="function" ? "Comprueba si tu celular vibra." : "Este navegador no admite vibración.";
-  };
-  function reconnect() {
-    clearTimeout(retry);
-    setStatus("Esperando al coordinador…");
-    retry=setTimeout(join,3500);
-  }
-  function join() {
-    if (!peer?.open || incoming) return;
-    const connection=peer.connect(prefix+room,{reliable:true});
-    incoming=connection;
-    const closed=()=>{
-      if (incoming!==connection) return;
-      incoming=null;
-      clearTimeout(deadline);
-      connection.close();
-      reconnect();
-    };
-    deadline=setTimeout(closed,10000);
-    connection.on("open",()=>{
-      if (incoming!==connection) return;
-      clearTimeout(deadline);
-      setStatus("Conectado · listo para recibir avisos");
-    });
-    connection.on("data",data=>{
-      if (incoming===connection && data?.type==="aviso" && typeof data.message==="string") announce(data.message.slice(0,240));
-    });
-    connection.on("close",closed);
-    connection.on("error",closed);
-  }
-  async function startReceiver() {
-    try {
-      await loadPeer();
-      peer=new Peer();
-      peer.on("open",join);
-      peer.on("disconnected",()=>{
-        if (!incoming?.open) setStatus("Reconectando…");
-        if (!peer.destroyed) peer.reconnect();
-      });
-      peer.on("error",error=>{
-        if (error.type==="peer-unavailable") {
-          const pending=incoming;
-          incoming=null;
-          clearTimeout(deadline);
-          pending?.close();
-          reconnect();
-        } else if (!incoming?.open) setStatus("Conexión interrumpida. Si no vuelve, recarga la página.");
-      });
-    } catch {setStatus("No se pudo cargar la conexión. Revisa internet y recarga.");}
-  }
-  if (/^[a-f0-9]{24}$/.test(room??"")) {
-    get("live-start").hidden=true;
-    get("live-receive").hidden=false;
-    setStatus("Conectando con el coordinador…");
-    startReceiver();
-  }
-})();
+document.addEventListener("fullscreenchange",()=>{
+ document.body.classList.toggle("full",Boolean(document.fullscreenElement));
+ $("fullscreen").textContent=document.fullscreenElement?"Salir de pantalla completa":"Pantalla completa";
+});
+document.addEventListener("visibilitychange",tick);
+render();setInterval(tick,1000);
 </script></body></html>
